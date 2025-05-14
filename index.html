@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>MyGPT 建築法令検索ウィジェット</title>
+  <style>
+    body { font-family: sans-serif; margin:0; padding:1em; }
+    #container { max-width:600px; margin:0 auto; }
+    input, button { padding:0.5em; font-size:1em; }
+    #results { margin-top:1em; }
+    .article { border-bottom:1px solid #ddd; padding:0.5em 0; }
+    .article h4 { margin:0; }
+    .article p { margin:0.25em 0; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h3>建築基準法全文検索</h3>
+    <input type="text" id="query" placeholder="キーワードを入力…">
+    <button id="searchBtn">検索</button>
+    <div id="results"></div>
+  </div>
+
+  <script src="https://unpkg.com/lunr/lunr.js"></script>
+  <script>
+    let idx, docs;
+
+    // 起動時にJSONをロードしてインデックス作成
+    async function init() {
+      docs = await fetch('kenchikukijunhou_documents_complete.json').then(r => r.json());
+      idx = lunr(function() {
+        this.ref('article_number');
+        this.field('text');
+        docs.documents.forEach(d => this.add(d));
+      });
+    }
+
+    // 検索実行
+    function doSearch() {
+      const q = document.getElementById('query').value;
+      const res = idx.search(q);
+      const container = document.getElementById('results');
+      container.innerHTML = '';
+      if (!res.length) {
+        container.innerHTML = '<p>該当なし</p>';
+        return;
+      }
+      res.slice(0,10).forEach(r => {
+        const doc = docs.documents.find(d => d.article_number === r.ref);
+        const el = document.createElement('div');
+        el.className = 'article';
+        el.innerHTML = `<h4>${doc.article_number}</h4><p>${doc.text.substring(0,200)}…</p>`;
+        container.appendChild(el);
+      });
+    }
+
+    document.getElementById('searchBtn').addEventListener('click', doSearch);
+    init();
+  </script>
+</body>
+</html>
